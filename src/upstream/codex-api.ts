@@ -1,3 +1,4 @@
+import { DEFAULT_CODEX_CLI_VERSION } from "./codex-version";
 import { Request } from "express";
 import { v4 as uuidv4 } from "uuid";
 import { Config } from "../config";
@@ -9,17 +10,12 @@ const RESPONSES_PATH = "/codex/responses";
 const RESPONSES_COMPACT_PATH = "/codex/responses/compact";
 
 const DEFAULT_ORIGINATOR = "codex_cli_rs";
-// Bumped from 0.40.0 — backend now version-gates `gpt-5.3-codex` and rejects
-// older versions with "requires a newer version of Codex". Matches latest
-// @openai/codex on npm at the time of writing. Override via
-// `cloaking.codex.cli-version` if upstream's minimum changes again.
-const DEFAULT_CLI_VERSION = "0.125.0";
 
 function buildUserAgent(config: Config): string {
   const codex = config.cloaking.codex || {};
   if (codex["user-agent"]) return codex["user-agent"];
   const originator = codex.originator || DEFAULT_ORIGINATOR;
-  const version = codex["cli-version"] || DEFAULT_CLI_VERSION;
+  const version = codex["cli-version"] || DEFAULT_CODEX_CLI_VERSION;
   const platform =
     process.platform === "darwin"
       ? "macos"
@@ -54,10 +50,9 @@ function buildHeaders(
     // Provider-level header sent by the official codex CLI on every request:
     // codex-rs/model-provider-info/src/lib.rs:324-328 sets
     //   http_headers = { "version": env!("CARGO_PKG_VERSION") }
-    // The current ChatGPT backend doesn't enforce it, but matching the
-    // official client makes us less brittle to future Cloudflare/upstream
-    // rules. Reuses cli-version so it stays in sync with the User-Agent.
-    version: codex["cli-version"] || DEFAULT_CLI_VERSION,
+    // Keep the client version consistent with the User-Agent.
+    // Upstream model availability can depend on client compatibility.
+    version: codex["cli-version"] || DEFAULT_CODEX_CLI_VERSION,
   };
   if (account.chatgptAccountId) {
     headers["ChatGPT-Account-ID"] = account.chatgptAccountId;
